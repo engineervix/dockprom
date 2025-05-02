@@ -1,0 +1,85 @@
+logging {
+  level = "info"
+}
+
+local.file_match "docker_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/lib/docker/containers/*/*.log",
+      __meta__ = {
+        service = "docker_logs"
+      }
+    }
+  ]
+}
+
+local.file_match "system_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/log/*.log",
+      __meta__ = {
+        service = "system"
+      }
+    },
+    {
+      __path__ = "/var/log/syslog",
+      __meta__ = {
+        service = "syslog"
+      }
+    }
+  ]
+}
+
+loki.source.file "docker_logs" {
+  targets    = local.file_match.docker_logs.targets
+  forward_to = [loki.process.container_logs.receiver]
+  tail_from_end = true
+}
+
+loki.source.file "system_logs" {
+  targets    = local.file_match.system_logs.targets
+  forward_to = [loki.process.system_logs.receiver]
+  tail_from_end = true
+}
+
+loki.process "container_logs" {
+  stage.json {
+    expressions = {
+      log      = "",
+      stream   = "",
+      time     = "",
+      container_id = "substring(labels.__path__, -74, -5)"
+    }
+  }
+
+  stage.docker {}
+
+  stage.labels {
+    values = {
+      container = "",
+      image = "",
+      container_id = "",
+      stream = "",
+      service = "labels.__meta_service"
+    }
+  }
+
+  forward_to = [loki.write.grafana_loki.receiver]
+}
+
+loki.process "system_logs" {
+  stage.labels {
+    values = {
+      service = "labels.__meta_service",
+      filename = "labels.__path__"
+    }
+  }
+
+  forward_to = [loki.write.grafana_loki.receiver]
+}
+
+loki.write "grafana_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+} 

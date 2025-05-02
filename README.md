@@ -1,7 +1,7 @@
 # dockprom
 
 A monitoring solution for Docker hosts and containers with [Prometheus](https://prometheus.io/), [Grafana](http://grafana.org/), [cAdvisor](https://github.com/google/cadvisor),
-[NodeExporter](https://github.com/prometheus/node_exporter) and alerting with [AlertManager](https://github.com/prometheus/alertmanager).
+[NodeExporter](https://github.com/prometheus/node_exporter), [Loki](https://grafana.com/oss/loki/) for logs, [Alloy](https://grafana.com/oss/alloy/) for log shipping, and alerting with [AlertManager](https://github.com/prometheus/alertmanager).
 
 This version of dockprom uses Traefik as a reverse proxy instead of Caddy.
 
@@ -52,6 +52,8 @@ The monitoring stack consists of the following services:
 * Grafana (visualize metrics) `http://<host-ip>:3000`
 * NodeExporter (host metrics collector)
 * cAdvisor (containers metrics collector)
+* Loki (log aggregation system) `http://<host-ip>:3100`
+* Alloy (log collector and shipper) `http://<host-ip>:12345`
 * Traefik (reverse proxy and basic auth provider for prometheus and alertmanager)
 
 ## Setup Grafana
@@ -84,6 +86,13 @@ Grafana is preconfigured with dashboards and Prometheus as the default data sour
 * Name: Prometheus
 * Type: Prometheus
 * Url: [http://prometheus:9090](http://prometheus:9090)
+* Access: proxy
+
+Additionally, Loki is configured as a datasource for logs:
+
+* Name: Loki
+* Type: Loki
+* Url: [http://loki:3100](http://loki:3100)
 * Access: proxy
 
 ## Dashboards
