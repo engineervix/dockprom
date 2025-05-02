@@ -1,0 +1,40 @@
+[global]
+  checkNewVersion = false
+  sendAnonymousUsage = false
+
+[log]
+  level = "INFO"
+
+[entryPoints]
+  [entryPoints.grafana]
+    address = ":3000"
+  
+  [entryPoints.cadvisor]
+    address = ":8080"
+  
+  [entryPoints.prometheus]
+    address = ":9090"
+  
+  [entryPoints.alertmanager]
+    address = ":9093"
+  
+  [entryPoints.pushgateway]
+    address = ":9091"
+
+[api]
+  dashboard = true
+  insecure = true
+
+[providers]
+  [providers.docker]
+    endpoint = "unix:///var/run/docker.sock"
+    exposedByDefault = false
+    network = "monitor-net"
+  
+  [providers.file]
+    filename = "/etc/traefik/dynamic_conf.toml"
+
+[http]
+  [http.middlewares]
+    [http.middlewares.auth.basicAuth]
+      users = ["${ADMIN_USER}:${ADMIN_PASSWORD_HASH}"] 

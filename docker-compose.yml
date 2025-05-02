@@ -3,11 +3,11 @@ networks:
     driver: bridge
 
 volumes:
-    prometheus_data: {}
-    grafana_data: {}
+  prometheus_data: {}
+  grafana_data: {}
+  letsencrypt_data: {}
 
 services:
-
   prometheus:
     image: prom/prometheus:v3.1.0
     container_name: prometheus
@@ -15,12 +15,12 @@ services:
       - ./prometheus:/etc/prometheus
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     restart: unless-stopped
     expose:
       - 9090
@@ -28,6 +28,11 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+      traefik.enable: "true"
+      traefik.http.routers.prometheus.entrypoints: "prometheus"
+      traefik.http.routers.prometheus.service: "prometheus"
+      traefik.http.services.prometheus.loadbalancer.server.port: "9090"
+      traefik.http.routers.prometheus.middlewares: "auth"
 
   alertmanager:
     image: prom/alertmanager:v0.28.0
@@ -35,8 +40,8 @@ services:
     volumes:
       - ./alertmanager:/etc/alertmanager
     command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
+      - "--config.file=/etc/alertmanager/config.yml"
+      - "--storage.path=/alertmanager"
     restart: unless-stopped
     expose:
       - 9093
@@ -44,6 +49,11 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+      traefik.enable: "true"
+      traefik.http.routers.alertmanager.entrypoints: "alertmanager"
+      traefik.http.routers.alertmanager.service: "alertmanager"
+      traefik.http.services.alertmanager.loadbalancer.server.port: "9093"
+      traefik.http.routers.alertmanager.middlewares: "auth"
 
   nodeexporter:
     image: prom/node-exporter:v1.8.2
@@ -53,10 +63,10 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
     restart: unless-stopped
     expose:
       - 9100
@@ -84,6 +94,11 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+      traefik.enable: "true"
+      traefik.http.routers.cadvisor.entrypoints: "cadvisor"
+      traefik.http.routers.cadvisor.service: "cadvisor"
+      traefik.http.services.cadvisor.loadbalancer.server.port: "8080"
+      traefik.http.routers.cadvisor.middlewares: "auth"
 
   grafana:
     image: grafana/grafana:11.5.1
@@ -103,6 +118,10 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+      traefik.enable: "true"
+      traefik.http.routers.grafana.entrypoints: "grafana"
+      traefik.http.routers.grafana.service: "grafana"
+      traefik.http.services.grafana.loadbalancer.server.port: "3000"
 
   pushgateway:
     image: prom/pushgateway:v1.11.0
@@ -114,10 +133,15 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+      traefik.enable: "true"
+      traefik.http.routers.pushgateway.entrypoints: "pushgateway"
+      traefik.http.routers.pushgateway.service: "pushgateway"
+      traefik.http.services.pushgateway.loadbalancer.server.port: "9091"
+      traefik.http.routers.pushgateway.middlewares: "auth"
 
-  caddy:
-    image: caddy:2.9.1
-    container_name: caddy
+  traefik:
+    image: traefik:v3.3.6
+    container_name: traefik
     ports:
       - "3000:3000"
       - "8080:8080"
@@ -125,10 +149,12 @@ services:
       - "9093:9093"
       - "9091:9091"
     volumes:
-      - ./caddy:/etc/caddy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml
+      - ./traefik/dynamic_conf.toml:/etc/traefik/dynamic_conf.toml
+      - letsencrypt_data:/letsencrypt
     environment:
       - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-$2a$14$1l.IozJx7xQRVmlkEQ32OeEEfP5mRxTpbDTCTcXRqn19gXD8YK1pO}
     restart: unless-stopped
     networks:

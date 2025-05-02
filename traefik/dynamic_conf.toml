@@ -1,0 +1,50 @@
+[http.routers]
+  [http.routers.grafana]
+    rule = "Host(`localhost`) && PathPrefix(`/grafana`)"
+    service = "grafana"
+    entryPoints = ["grafana"]
+  
+  [http.routers.cadvisor]
+    rule = "Host(`localhost`) && PathPrefix(`/cadvisor`)"
+    service = "cadvisor"
+    entryPoints = ["cadvisor"]
+    middlewares = ["auth"]
+  
+  [http.routers.prometheus]
+    rule = "Host(`localhost`) && PathPrefix(`/prometheus`)"
+    service = "prometheus"
+    entryPoints = ["prometheus"]
+    middlewares = ["auth"]
+  
+  [http.routers.alertmanager]
+    rule = "Host(`localhost`) && PathPrefix(`/alertmanager`)"
+    service = "alertmanager"
+    entryPoints = ["alertmanager"]
+    middlewares = ["auth"]
+  
+  [http.routers.pushgateway]
+    rule = "Host(`localhost`) && PathPrefix(`/pushgateway`)"
+    service = "pushgateway"
+    entryPoints = ["pushgateway"]
+    middlewares = ["auth"]
+
+[http.services]
+  [http.services.grafana.loadBalancer]
+    [[http.services.grafana.loadBalancer.servers]]
+      url = "http://grafana:3000"
+  
+  [http.services.cadvisor.loadBalancer]
+    [[http.services.cadvisor.loadBalancer.servers]]
+      url = "http://cadvisor:8080"
+  
+  [http.services.prometheus.loadBalancer]
+    [[http.services.prometheus.loadBalancer.servers]]
+      url = "http://prometheus:9090"
+  
+  [http.services.alertmanager.loadBalancer]
+    [[http.services.alertmanager.loadBalancer.servers]]
+      url = "http://alertmanager:9093"
+  
+  [http.services.pushgateway.loadBalancer]
+    [[http.services.pushgateway.loadBalancer.servers]]
+      url = "http://pushgateway:9091" 
